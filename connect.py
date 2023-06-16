@@ -1,5 +1,7 @@
 # for representing the board as a matrix and doing operations on it
+from typing import Literal
 import numpy as np
+import numpy.typing as npt
 # for gui
 import pygame
 # for exiting the gui
@@ -44,27 +46,29 @@ def create_board():
 
 
 # add a piece to a given location, i.e., set a position in the matrix as 1 or 2
-def drop_piece(board, row, col, piece):
+def drop_piece(board: npt.NDArray[np.float64], row: int, col: int, piece: Literal[1, 2]):
     board[row][col] = piece
 
 
 # checking that the top row of the selected column is still not filled
 # i.e., that there is still space in the current column
 # note that indexing starts at 0
-def is_valid_location(board, col):
+def is_valid_location(board: npt.NDArray[np.float64], col: int):
     return board[0][col] == 0
 
 
 # checking where the piece will fall in the current column
 # i.e., finding the first zero row in the given column
-def get_next_open_row(board, col):
+def get_next_open_row(board: npt.NDArray[np.float64], col: int):
     for r in range(ROWS-1, -1, -1):
         if board[r][col] == 0:
             return r
 
+    return -1
+
 
 # calculating if the current state of the board for player or AI is a win
-def winning_move(board, piece):
+def winning_move(board: npt.NDArray[np.float64], piece: Literal[1, 2]):
     # checking horizontal 'windows' of 4 for win
     # for c in range(COLS-3):
     #     for r in range(ROWS):
@@ -90,29 +94,33 @@ def winning_move(board, piece):
     #             return True
     for c in range(COLS-1):
         for r in range(ROWS-1):
-            if board[r][c] == piece and board[r+1][c] == piece and board[r][c+1] == piece and board[r+1][c+1] == piece :
+            if board[r][c] == piece and board[r+1][c] == piece and board[r][c+1] == piece and board[r+1][c+1] == piece:
                 return True
 
 
 # visually representing the board using pygame
 # for each position in the matrix the board is either filled with an empty black circle, or a palyer/AI red/yellow circle
-def draw_board(board):
+def draw_board(board: npt.NDArray[np.float64]):
     for c in range(COLS):
         for r in range(ROWS):
-            pygame.draw.rect(screen, BLUE, (c * SQUARESIZE, r * SQUARESIZE + SQUARESIZE, SQUARESIZE, SQUARESIZE ))
+            pygame.draw.rect(screen, BLUE, (c * SQUARESIZE, r *
+                             SQUARESIZE + SQUARESIZE, SQUARESIZE, SQUARESIZE))
             if board[r][c] == 0:
-                pygame.draw.circle(screen, BLACK, (int(c * SQUARESIZE + SQUARESIZE/2), int(r* SQUARESIZE + SQUARESIZE + SQUARESIZE/2)), circle_radius)
+                pygame.draw.circle(screen, BLACK, (int(c * SQUARESIZE + SQUARESIZE/2), int(
+                    r * SQUARESIZE + SQUARESIZE + SQUARESIZE/2)), circle_radius)
             elif board[r][c] == 1:
-                pygame.draw.circle(screen, RED, (int(c * SQUARESIZE + SQUARESIZE/2), int(r* SQUARESIZE + SQUARESIZE + SQUARESIZE/2)), circle_radius)
-            else :
-                pygame.draw.circle(screen, YELLOW, (int(c * SQUARESIZE + SQUARESIZE/2), int(r* SQUARESIZE + SQUARESIZE + SQUARESIZE/2)), circle_radius)
+                pygame.draw.circle(screen, RED, (int(c * SQUARESIZE + SQUARESIZE/2), int(
+                    r * SQUARESIZE + SQUARESIZE + SQUARESIZE/2)), circle_radius)
+            else:
+                pygame.draw.circle(screen, YELLOW, (int(c * SQUARESIZE + SQUARESIZE/2), int(
+                    r * SQUARESIZE + SQUARESIZE + SQUARESIZE/2)), circle_radius)
 
     pygame.display.update()
 
 
 # evaluate a 'window' of 4 locations in a row based on what pieces it contains
 # the values used can be experimented with
-def evaluate_window(window, piece):
+def evaluate_window(window: list[list[float]], piece: Literal[1, 2]):
     # by default the oponent is the player
     opponent_piece = PLAYER_PIECE
 
@@ -133,18 +141,17 @@ def evaluate_window(window, piece):
 
     # or decrese it if the oponent has 3 in a row
     if window.count(opponent_piece) == 3 and window.count(0) == 1:
-        score -= 4 
+        score -= 4
 
-    return score    
+    return score
 
 
 # scoring the overall attractiveness of a board after a piece has been droppped
-def score_position(board, piece):
-
+def score_position(board: npt.NDArray[np.float64], piece: Literal[1, 2]):
     score = 0
 
     # score center column --> we are prioritizing the central column because it provides more potential winning windows
-    center_array = [int(i) for i in list(board[:,COLS//2])]
+    center_array = [int(i) for i in list(board[:, COLS//2])]
     center_count = center_array.count(piece)
     score += center_count * 6
 
@@ -168,10 +175,10 @@ def score_position(board, piece):
     #     for c in range(COLS - 3):
     #         window = [board[r-i][c+i] for i in range(4)]
     #         score += evaluate_window(window, piece)
-    for i in range (ROWS-1):
-        for j in range (COLS-1):
-            window=[[board[i+a][j+b] for a in range(2)] for b in range(2)]
-            score += evaluate_window(window,piece)
+    for i in range(ROWS-1):
+        for j in range(COLS-1):
+            window = [[board[i+a][j+b] for a in range(2)] for b in range(2)]
+            score += evaluate_window(window, piece)
 
     # score negatively sloped diagonals
     # for r in range(3,ROWS):
@@ -183,7 +190,9 @@ def score_position(board, piece):
 
 # checking if the given turn or in other words node in the minimax tree is terminal
 # a terminal node is player winning, AI winning or board being filled up
-def is_terminal_node(board):
+
+
+def is_terminal_node(board: npt.NDArray[np.float64]):
     return winning_move(board, PLAYER_PIECE) or winning_move(board, AI_PIECE) or len(get_valid_locations(board)) == 0
 
 
@@ -193,7 +202,13 @@ def is_terminal_node(board):
 # More on alpha-beta pruning here: https://www.youtube.com/watch?v=l-hh51ncgDI.
 # maximizing_palyer is a boolean value that tells whether we are maximizing or minimizing
 # in this implementation, AI is maximizing.
-def minimax(board, depth, alpha, beta, maximizing_player):
+def minimax(
+        board: npt.NDArray[np.float64],
+        depth: int,
+        alpha: int | float,
+        beta: int | float,
+        maximizing_player: bool
+):
 
     # all valid locations on the board
     valid_locations = get_valid_locations(board)
@@ -204,7 +219,7 @@ def minimax(board, depth, alpha, beta, maximizing_player):
     # if the board is terminal or depth == 0
     # we score the win very high and a draw as 0
     if depth == 0 or is_terminal:
-        if is_terminal: # winning move 
+        if is_terminal:  # winning move
             if winning_move(board, AI_PIECE):
                 return (None, 10000000)
             elif winning_move(board, PLAYER_PIECE):
@@ -212,7 +227,7 @@ def minimax(board, depth, alpha, beta, maximizing_player):
             else:
                 return (None, 0)
         # if depth is zero, we simply score the current board
-        else: # depth is zero
+        else:  # depth is zero
             return (None, score_position(board, AI_PIECE))
 
     # if the current board is not rerminal and we are maximizing
@@ -237,16 +252,16 @@ def minimax(board, depth, alpha, beta, maximizing_player):
                 value = new_score
                 column = col
             # alpha is the best option we have overall
-            alpha = max(value, alpha) 
-            # if alpha (our current move) is greater (better) than beta (opponent's best move), then 
+            alpha = max(value, alpha)
+            # if alpha (our current move) is greater (better) than beta (opponent's best move), then
             # the oponent will never take it and we can prune this branch
             if alpha >= beta:
                 break
 
         return column, value
-    
+
     # same as above, but for the minimizing player
-    else: # for thte minimizing player
+    else:  # for thte minimizing player
         value = math.inf
         column = random.choice(valid_locations)
         for col in valid_locations:
@@ -257,16 +272,16 @@ def minimax(board, depth, alpha, beta, maximizing_player):
             if new_score < value:
                 value = new_score
                 column = col
-            beta = min(value, beta) 
+            beta = min(value, beta)
             if alpha >= beta:
                 break
         return column, value
 
 
 # get all columns where a piece can be
-def get_valid_locations(board):
-    valid_locations = []
-    
+def get_valid_locations(board: npt.NDArray[np.float64]):
+    valid_locations: list[int] = []
+
     for column in range(COLS):
         if is_valid_location(board, column):
             valid_locations.append(column)
@@ -323,10 +338,8 @@ pygame.display.update()
 # loop that runs while the game_over variable is false,
 # i.e., someone hasn't placed 4 in a row yet
 while not game_over:
-
     # for every player event
     for event in pygame.event.get():
-
         # if player clses the window
         if event.type == pygame.QUIT:
             sys.exit()
@@ -336,40 +349,40 @@ while not game_over:
             pygame.draw.rect(screen, BLACK, (0, 0, width, SQUARESIZE))
             xpos = pygame.mouse.get_pos()[0]
             if turn == PLAYER_TURN:
-                pygame.draw.circle(screen, RED, (xpos, int(SQUARESIZE/2)), circle_radius )
+                pygame.draw.circle(
+                    screen, RED, (xpos, int(SQUARESIZE/2)), circle_radius)
 
         # if player clicks the button, we drop their piece down
         if event.type == pygame.MOUSEBUTTONDOWN and not_over:
-            pygame.draw.rect(screen, BLACK, (0,0, width, SQUARESIZE))
+            pygame.draw.rect(screen, BLACK, (0, 0, width, SQUARESIZE))
 
             # ask for player 1 inupt
             if turn == PLAYER_TURN:
 
                 # we assume players will use correct input
-                xpos = event.pos[0] 
-                col = int(math.floor(xpos/SQUARESIZE)) 
+                xpos = event.pos[0]
+                col = int(math.floor(xpos/SQUARESIZE))
 
                 if is_valid_location(board, col):
                     row = get_next_open_row(board, col)
                     drop_piece(board, row, col, PLAYER_PIECE)
                     if winning_move(board, PLAYER_PIECE):
                         print("PLAYER 1 WINS!")
-                        label = my_font.render("PLAYER 1 WINS!", 1, RED)
+                        label = my_font.render("PLAYER 1 WINS!", True, RED)
                         screen.blit(label, (40, 10))
                         not_over = False
                         t = Timer(3.0, end_game)
                         t.start()
-                draw_board(board) 
+                draw_board(board)
 
                 # increment turn by 1
                 turn += 1
 
                 # this will alternate between 0 and 1 withe very turn
-                turn = turn % 2 
+                turn = turn % 2
 
         pygame.display.update()
 
-                     
     # if its the AI's turn
     if turn == AI_TURN and not game_over and not_over:
 
@@ -387,7 +400,7 @@ while not game_over:
                 not_over = False
                 t = Timer(3.0, end_game)
                 t.start()
-        draw_board(board)    
+        draw_board(board)
 
         # increment turn by 1
         turn += 1
